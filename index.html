@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="pl" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON & XML Formatter</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0d1117;
+            min-height: 100vh;
+        }
+
+        .container-fluid {
+            max-width: 1600px;
+        }
+
+        header {
+            background-color: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 1.5rem 0;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #e6edf3;
+            margin-bottom: 0.25rem;
+        }
+
+        .subtitle {
+            color: #7d8590;
+            font-size: 0.875rem;
+        }
+
+        .controls {
+            background-color: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 1rem 0;
+        }
+
+        .type-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .type-json {
+            background-color: #238636;
+            color: #ffffff;
+        }
+
+        .type-xml {
+            background-color: #1f6feb;
+            color: #ffffff;
+        }
+
+        .type-unknown {
+            background-color: #30363d;
+            color: #7d8590;
+        }
+
+        .btn-outline-secondary {
+            border-color: #30363d;
+            color: #e6edf3;
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: #30363d;
+            border-color: #30363d;
+            color: #e6edf3;
+        }
+
+        .content-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            min-height: calc(100vh - 180px);
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            background-color: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            color: #7d8590;
+            font-weight: 500;
+        }
+
+        textarea, pre {
+            flex: 1;
+            padding: 1rem;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            border: none;
+            resize: none;
+            outline: none;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        textarea {
+            background-color: #0d1117;
+            color: #e6edf3;
+            border-right: 1px solid #30363d;
+        }
+
+        textarea::placeholder {
+            color: #484f58;
+        }
+
+        pre {
+            background-color: #0d1117;
+            color: #e6edf3;
+        }
+
+        .json-key {
+            color: #79c0ff;
+        }
+
+        .json-string {
+            color: #a5d6ff;
+        }
+
+        .json-number {
+            color: #79c0ff;
+        }
+
+        .json-boolean {
+            color: #ff7b72;
+        }
+
+        .json-null {
+            color: #ffa657;
+        }
+
+        .xml-tag {
+            color: #7ee787;
+        }
+
+        .xml-attr-name {
+            color: #79c0ff;
+        }
+
+        .xml-attr-value {
+            color: #a5d6ff;
+        }
+
+        .error {
+            color: #ff7b72;
+            padding: 1rem;
+            background-color: #1c1e26;
+            margin: 1rem;
+            border-radius: 6px;
+            border-left: 3px solid #f85149;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .content-area {
+                grid-template-columns: 1fr;
+            }
+
+            textarea {
+                border-right: none;
+                border-bottom: 1px solid #30363d;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <header>
+            <div class="container-fluid px-4">
+                <h1>JSON & XML Formatter</h1>
+                <p class="subtitle mb-0">Wklej kod aby go automatycznie sformatować</p>
+            </div>
+        </header>
+
+        <div class="controls">
+            <div class="container-fluid px-4">
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <div class="d-flex align-items-center gap-2 small">
+                        <span class="text-secondary">Typ:</span>
+                        <span class="type-badge type-unknown" id="typeIndicator">—</span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearAll()">Wyczyść</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="copyFormatted()">Kopiuj</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="panel">
+                <div class="panel-header">Wejście</div>
+                <textarea id="input" placeholder="Wklej tutaj JSON lub XML..."></textarea>
+            </div>
+            <div class="panel">
+                <div class="panel-header">Wyjście</div>
+                <pre id="output">Sformatowany kod pojawi się tutaj...</pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1000">
+        <div id="toast" class="toast align-items-center text-bg-success border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    Skopiowano do schowka
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.9/beautify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.9/beautify-html.min.js"></script>
+    <script>
+        const input = document.getElementById('input');
+        const output = document.getElementById('output');
+        const typeIndicator = document.getElementById('typeIndicator');
+        const toastElement = document.getElementById('toast');
+        const toast = new bootstrap.Toast(toastElement);
+
+        function detectType(str) {
+            str = str.trim();
+            if (!str) return 'unknown';
+            
+            if ((str.startsWith('{') && str.endsWith('}')) || 
+                (str.startsWith('[') && str.endsWith(']'))) {
+                try {
+                    JSON.parse(str);
+                    return 'json';
+                } catch (e) {
+                    return 'unknown';
+                }
+            }
+            
+            if (str.startsWith('<') && str.includes('>')) {
+                return 'xml';
+            }
+            
+            return 'unknown';
+        }
+
+        function formatJSON(str) {
+            try {
+                const formatted = js_beautify(str, { indent_size: 2 });
+                return syntaxHighlightJSON(formatted);
+            } catch (e) {
+                return `<span class="error">Błąd parsowania JSON: ${e.message}</span>`;
+            }
+        }
+
+        function syntaxHighlightJSON(json) {
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'json-number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'json-key';
+                    } else {
+                        cls = 'json-string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'json-boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'json-null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+
+        function formatXML(str) {
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(str, 'text/xml');
+                
+                const errorNode = xmlDoc.querySelector('parsererror');
+                if (errorNode) {
+                    return `<span class="error">Błąd parsowania XML: Niepoprawna składnia XML</span>`;
+                }
+                
+                const formatted = html_beautify(str, { 
+                    indent_size: 2,
+                    wrap_attributes: 'auto'
+                });
+                return syntaxHighlightXML(formatted);
+            } catch (e) {
+                return `<span class="error">Błąd parsowania XML: ${e.message}</span>`;
+            }
+        }
+
+        function syntaxHighlightXML(xml) {
+            xml = xml.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            xml = xml.replace(/(&lt;\?xml.*?\?&gt;)/g, '<span class="xml-tag">$1</span>');
+            
+            xml = xml.replace(/(&lt;!--.*?--&gt;)/g, '<span class="xml-attr-name">$1</span>');
+            
+            xml = xml.replace(/(&lt;\/?)(\w+)(.*?)(&gt;)/g, function(match, openTag, tagName, attrs, closeTag) {
+                let result = '<span class="xml-tag">' + openTag + tagName + '</span>';
+                
+                if (attrs) {
+                    result += attrs.replace(/([\w:-]+)(=)(".*?"|'.*?')/g, 
+                        '<span class="xml-attr-name">$1</span>$2<span class="xml-attr-value">$3</span>');
+                }
+                
+                result += '<span class="xml-tag">' + closeTag + '</span>';
+                return result;
+            });
+            
+            return xml;
+        }
+
+        function updateTypeIndicator(type) {
+            typeIndicator.className = 'type-badge type-' + type;
+            const labels = {
+                'json': 'JSON',
+                'xml': 'XML',
+                'unknown': '—'
+            };
+            typeIndicator.textContent = labels[type] || '—';
+        }
+
+        function processInput() {
+            const value = input.value;
+            
+            if (!value.trim()) {
+                output.innerHTML = 'Sformatowany kod pojawi się tutaj...';
+                updateTypeIndicator('unknown');
+                return;
+            }
+
+            const type = detectType(value);
+            updateTypeIndicator(type);
+
+            if (type === 'json') {
+                output.innerHTML = formatJSON(value);
+            } else if (type === 'xml') {
+                output.innerHTML = formatXML(value);
+            } else {
+                output.innerHTML = '<span class="error">Nie można wykryć formatu. Upewnij się, że wklejasz poprawny JSON lub XML.</span>';
+            }
+        }
+
+        function clearAll() {
+            input.value = '';
+            output.innerHTML = 'Sformatowany kod pojawi się tutaj...';
+            updateTypeIndicator('unknown');
+        }
+
+        function copyFormatted() {
+            const text = output.innerText;
+            if (text && !text.includes('pojawi się tutaj') && !text.includes('Błąd')) {
+                navigator.clipboard.writeText(text).then(() => {
+                    toast.show();
+                });
+            }
+        }
+
+        input.addEventListener('input', processInput);
+        input.addEventListener('paste', () => setTimeout(processInput, 10));
+    </script>
+</body>
+</html>
