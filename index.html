@@ -234,17 +234,14 @@
             str = str.trim();
             if (!str) return 'unknown';
             
-            if ((str.startsWith('{') && str.endsWith('}')) || 
-                (str.startsWith('[') && str.endsWith(']'))) {
-                try {
-                    JSON.parse(str);
-                    return 'json';
-                } catch (e) {
-                    return 'unknown';
-                }
+            // Sprawdź czy wygląda na JSON (nawet niepoprawny)
+            if (str.startsWith('{') || str.startsWith('[') || 
+                /^[\s]*["']?\w+["']?\s*:/.test(str)) {
+                return 'json';
             }
             
-            if (str.startsWith('<') && str.includes('>')) {
+            // Sprawdź czy wygląda na XML (nawet niepoprawny)
+            if (str.startsWith('<') || /<\w+/.test(str)) {
                 return 'xml';
             }
             
@@ -253,10 +250,34 @@
 
         function formatJSON(str) {
             try {
-                const formatted = js_beautify(str, { indent_size: 2 });
+                // Próba naprawy częstych błędów
+                let fixed = str.trim();
+                
+                // Dodaj brakujące nawiasy klamrowe/kwadratowe
+                if (fixed.startsWith('{') && !fixed.endsWith('}')) {
+                    fixed += '}';
+                }
+                if (fixed.startsWith('[') && !fixed.endsWith(']')) {
+                    fixed += ']';
+                }
+                
+                // Spróbuj sparsować
+                try {
+                    JSON.parse(fixed);
+                } catch (parseError) {
+                    // Jeśli nie działa, po prostu formatuj jako tekst z wcięciami
+                    console.log('JSON parse failed, formatting as-is:', parseError);
+                }
+                
+                const formatted = js_beautify(fixed, { 
+                    indent_size: 2,
+                    brace_style: 'collapse',
+                    preserve_newlines: false
+                });
                 return syntaxHighlightJSON(formatted);
             } catch (e) {
-                return `<span class="error">Błąd parsowania JSON: ${e.message}</span>`;
+                // Ostateczność - pokaż z podświetleniem bez formatowania
+                return syntaxHighlightJSON(str);
             }
         }
 
@@ -281,21 +302,28 @@
 
         function formatXML(str) {
             try {
+                // Usuń nadmiarowe białe znaki
+                let fixed = str.trim();
+                
+                // Spróbuj dodać brakujący tag zamykający dla prostych przypadków
+                const openTags = (fixed.match(/<(\w+)[^>]*>/g) || []).map(tag => tag.match(/<(\w+)/)[1]);
+                const closeTags = (fixed.match(/<\/(\w+)>/g) || []).map(tag => tag.match(/<\/(\w+)>/)[1]);
+                
+                // Prosta walidacja - nie próbuj naprawiać skomplikowanych przypadków
                 const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(str, 'text/xml');
+                const xmlDoc = parser.parseFromString(fixed, 'text/xml');
                 
-                const errorNode = xmlDoc.querySelector('parsererror');
-                if (errorNode) {
-                    return `<span class="error">Błąd parsowania XML: Niepoprawna składnia XML</span>`;
-                }
-                
-                const formatted = html_beautify(str, { 
+                // Ignoruj błędy parsowania - formatuj mimo wszystko
+                const formatted = html_beautify(fixed, { 
                     indent_size: 2,
-                    wrap_attributes: 'auto'
+                    wrap_attributes: 'auto',
+                    preserve_newlines: false,
+                    max_preserve_newlines: 0
                 });
                 return syntaxHighlightXML(formatted);
             } catch (e) {
-                return `<span class="error">Błąd parsowania XML: ${e.message}</span>`;
+                // Ostateczność - pokaż z podświetleniem bez formatowania
+                return syntaxHighlightXML(str);
             }
         }
 
